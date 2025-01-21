@@ -1,0 +1,111 @@
+From 0041737b93547df8f4e2bddd765a73e10fc6e513 Mon Sep 17 00:00:00 2001
+From: kas User <kas@example.com>
+Date: Mon, 20 Jan 2025 21:04:46 +0000
+Subject: [PATCH] Add support for CMake package config files.
+
+---
+ CMakeLists.txt                   | 54 ++++++++++++++++++++++++++------
+ cmake/CodecServerConfig.cmake.in |  6 ++++
+ 2 files changed, 51 insertions(+), 9 deletions(-)
+ create mode 100644 cmake/CodecServerConfig.cmake.in
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 81aed8a..65ff011 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,34 +1,70 @@
+-cmake_minimum_required (VERSION 3.6)
++cmake_minimum_required(VERSION 3.6)
+ 
+ if(NOT CMAKE_BUILD_TYPE)
+     set(CMAKE_BUILD_TYPE Release)
+ endif()
+ 
+-project (codecserver VERSION 0.3.0)
++project(codecserver VERSION 0.3.0)
+ add_definitions(-DVERSION="${PROJECT_VERSION}-dev")
+ 
+ enable_language(CXX)
+ set(CMAKE_CXX_STANDARD 17)
+ 
+-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
++set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
+ 
+ include(GNUInstallDirs)
+ 
+ find_package(Threads REQUIRED)
+ find_package(protobuf CONFIG)
+-if (NOT protobuf_FOUND)
++if(NOT protobuf_FOUND)
+     include(FindProtobuf)
+     find_package(Protobuf REQUIRED)
+ endif()
+ find_package(udev REQUIRED)
+ 
+-SET(CMAKE_CXX_FLAGS_DEBUG "-g -O3 -rdynamic")
+-SET(CMAKE_C_FLAGS_DEBUG "-g -O3")
+-SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -rdynamic")
+-SET(CMAKE_C_FLAGS_RELEASE "-O3")
++set(CMAKE_CXX_FLAGS_DEBUG "-g -O3 -rdynamic")
++set(CMAKE_C_FLAGS_DEBUG "-g -O3")
++set(CMAKE_CXX_FLAGS_RELEASE "-O3 -rdynamic")
++set(CMAKE_C_FLAGS_RELEASE "-O3")
+ 
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+ 
+ add_subdirectory(src/lib)
+ add_subdirectory(src/server)
+-add_subdirectory(src/modules)
+\ No newline at end of file
++add_subdirectory(src/modules)
++
++# Generate and install CodecServerConfig.cmake
++include(CMakePackageConfigHelpers)
++
++set(INSTALL_CONFIGDIR "${CMAKE_INSTALL_PREFIX}/lib/cmake/CodecServer")
++
++install(TARGETS codecserver
++    EXPORT codecserver-targets
++    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
++    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
++)
++
++install(EXPORT codecserver-targets
++    FILE CodecServerTargets.cmake
++    NAMESPACE CodecServer::
++    DESTINATION ${INSTALL_CONFIGDIR}
++)
++
++configure_package_config_file(
++    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CodecServerConfig.cmake.in"
++    "${CMAKE_CURRENT_BINARY_DIR}/CodecServerConfig.cmake"
++    INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
++)
++
++write_basic_package_version_file(
++    "${CMAKE_CURRENT_BINARY_DIR}/CodecServerConfigVersion.cmake"
++    VERSION ${PROJECT_VERSION}
++    COMPATIBILITY SameMajorVersion
++)
++
++install(FILES
++    "${CMAKE_CURRENT_BINARY_DIR}/CodecServerConfig.cmake"
++    "${CMAKE_CURRENT_BINARY_DIR}/CodecServerConfigVersion.cmake"
++    DESTINATION ${INSTALL_CONFIGDIR}
++)
+diff --git a/cmake/CodecServerConfig.cmake.in b/cmake/CodecServerConfig.cmake.in
+new file mode 100644
+index 0000000..9c03461
+--- /dev/null
++++ b/cmake/CodecServerConfig.cmake.in
+@@ -0,0 +1,6 @@
++@PACKAGE_INIT@
++
++include("${CMAKE_CURRENT_LIST_DIR}/CodecServerTargets.cmake")
++
++set(CodecServer_INCLUDE_DIRS "@CMAKE_INSTALL_FULL_INCLUDEDIR@")
++set(CodecServer_LIBRARIES CodecServer::codecserver)
+-- 
+2.39.2
+
